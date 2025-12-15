@@ -1,7 +1,7 @@
 """Setup configuration for LLM Middleware package."""
 from setuptools import find_packages, setup
 
-with open("README_NEW.md", "r", encoding="utf-8") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 with open("requirements.txt", "r", encoding="utf-8") as fh:
