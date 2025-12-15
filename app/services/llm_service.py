@@ -131,6 +131,11 @@ class LLMService:
 
             tool_calls_made: list[ToolCallInfo] = []
             usage = None
+            cumulative_usage = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0
+            }
             iterations = 0
 
             # Tool calling loop
@@ -150,6 +155,18 @@ class LLMService:
                 content = response.get("content", "")
                 usage = response.get("usage")
 
+                # Track cumulative token usage
+                if usage:
+                    cumulative_usage["prompt_tokens"] += usage.get("prompt_tokens", 0)
+                    cumulative_usage["completion_tokens"] += usage.get("completion_tokens", 0)
+                    cumulative_usage["total_tokens"] += usage.get("total_tokens", 0)
+                    logger.info(
+                        f"Iteration {iterations} token usage: "
+                        f"prompt={usage.get('prompt_tokens', 0)}, "
+                        f"completion={usage.get('completion_tokens', 0)}, "
+                        f"total={usage.get('total_tokens', 0)}"
+                    )
+
                 logger.debug(f"LLM response length: {len(content)} chars")
 
                 # Parse for tool calls
@@ -157,13 +174,19 @@ class LLMService:
 
                 if not tool_call:
                     # No tool call - final response
-                    logger.info(f"Chat completed in {iterations} iterations")
+                    logger.info(
+                        f"Chat completed in {iterations} iteration(s). "
+                        f"Cumulative token usage: "
+                        f"prompt={cumulative_usage['prompt_tokens']}, "
+                        f"completion={cumulative_usage['completion_tokens']}, "
+                        f"total={cumulative_usage['total_tokens']}"
+                    )
 
                     return ChatResponse(
                         success=True,
                         message=ChatMessage(role="assistant", content=content),
                         tool_calls_made=tool_calls_made,
-                        usage=usage,
+                        usage=cumulative_usage,
                         provider=request.provider or settings.default_provider,
                         model=model,
                     )
@@ -217,12 +240,19 @@ class LLMService:
                     messages.append({"role": "user", "content": result_message})
 
             # Max iterations reached
-            logger.warning(f"Max iterations ({MAX_TOOL_ITERATIONS}) reached")
+            logger.warning(
+                f"Max iterations ({MAX_TOOL_ITERATIONS}) reached. "
+                f"Cumulative token usage: "
+                f"prompt={cumulative_usage['prompt_tokens']}, "
+                f"completion={cumulative_usage['completion_tokens']}, "
+                f"total={cumulative_usage['total_tokens']}"
+            )
             raise MaxIterationsException(
                 f"Maximum tool calling iterations ({MAX_TOOL_ITERATIONS}) reached",
                 details={
                     "iterations": iterations,
                     "tool_calls": len(tool_calls_made),
+                    "cumulative_usage": cumulative_usage,
                 }
             )
 
@@ -234,14 +264,5 @@ class LLMService:
             raise ProviderException(
                 f"Chat service error: {str(e)}",
                 details={"error_type": type(e).__name__}
-            )
-            return ChatResponse(
-                success=False,
-                message=ChatMessage(
-                    role="assistant",
-                    content=f"Помилка: {str(e)}",
-                ),
-                provider=request.provider or settings.default_provider,
-                model=request.model or settings.default_model,
             )
 

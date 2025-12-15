@@ -38,3 +38,26 @@ def get_logger(name: str) -> logging.Logger:
     """
     return logging.getLogger(name)
 
+
+def log_token_usage(logger: logging.Logger, usage: dict[str, Any] | None, context: str = "") -> None:
+    """Log token usage information.
+
+    Args:
+        logger: Logger instance
+        usage: Usage dictionary with token counts
+        context: Additional context for the log message
+    """
+    if not usage:
+        return
+
+    prompt_tokens = usage.get("prompt_tokens", 0)
+    completion_tokens = usage.get("completion_tokens", 0)
+    total_tokens = usage.get("total_tokens", 0)
+
+    prefix = f"{context} - " if context else ""
+    logger.info(
+        f"{prefix}Token usage: prompt={prompt_tokens}, "
+        f"completion={completion_tokens}, total={total_tokens}"
+    )
+
+

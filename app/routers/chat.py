@@ -43,10 +43,20 @@ async def chat(
 
         response = await llm_service.chat(request)
 
-        logger.info(
-            f"Chat request completed - success: {response.success}, "
-            f"tool_calls: {len(response.tool_calls_made)}"
-        )
+        # Log token usage summary
+        if response.usage:
+            logger.info(
+                f"Chat request completed - success: {response.success}, "
+                f"tool_calls: {len(response.tool_calls_made)}, "
+                f"tokens: {response.usage.get('total_tokens', 0)} "
+                f"(prompt: {response.usage.get('prompt_tokens', 0)}, "
+                f"completion: {response.usage.get('completion_tokens', 0)})"
+            )
+        else:
+            logger.info(
+                f"Chat request completed - success: {response.success}, "
+                f"tool_calls: {len(response.tool_calls_made)}"
+            )
 
         return response
 

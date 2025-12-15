@@ -61,6 +61,14 @@ class OllamaProvider(BaseLLMProvider):
                 },
             }
 
+            # Log token usage
+            logger.info(
+                f"Ollama token usage - Model: {model}, "
+                f"Prompt: {result['usage']['prompt_tokens']}, "
+                f"Completion: {result['usage']['completion_tokens']}, "
+                f"Total: {result['usage']['total_tokens']}"
+            )
+
             # Обробити tool calls
             if response.choices[0].message.tool_calls:
                 for tool_call in response.choices[0].message.tool_calls:
