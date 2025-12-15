@@ -1,316 +1,225 @@
-# Python AI Service - FastAPI Middleware
+# LLM Middleware Service - Clean Architecture
 
-## Огляд
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Це FastAPI middleware сервіс, який передає запити до різних LLM провайдерів (DeepInfra, OpenAI, Ollama) та управляє tool calling з автоматичним виконанням інструментів.
+A clean, well-structured FastAPI middleware service for interacting with multiple LLM providers (DeepInfra, OpenAI, Ollama) with text-based tool calling support.
 
-## Архітектура
+## 🎯 Features
 
-```
-┌─────────────────────────┐
-│   Laravel App (PHP)     │
-└────────────┬────────────┘
-             │ HTTP
-             ▼
-┌─────────────────────────┐
-│  Python AI Service      │
-│  (FastAPI Middleware)   │
-│                         │
-│  ┌─────────────────┐   │
-│  │ LLM Service     │   │
-│  │ - Chat Logic    │   │
-│  │ - Tool Calling  │   │
-│  └─────────────────┘   │
-│  ┌─────────────────┐   │
-│  │ Tool Executor   │   │
-│  │ - Calculator    │   │
-│  │ - Web Search    │   │
-│  └─────────────────┘   │
-└────────────┬────────────┘
-             │ API Calls
-             ▼
-┌─────────────────────────┐
-│   LLM Providers         │
-│  - DeepInfra            │
-│  - OpenAI               │
-│  - Ollama (Local)       │
-└─────────────────────────┘
-```
+- **Multiple LLM Providers**: DeepInfra, OpenAI, Ollama
+- **Text-based Tool Calling**: Automatic tool execution loop
+- **Built-in Tools**: Calculator, Web Search, News Search, Web Scraper
+- **Clean Architecture**: Proper separation of concerns
+- **Type Safety**: Full type hints throughout
+- **Error Handling**: Custom exceptions and proper error responses
+- **Testing**: Pytest-based test suite
+- **Docker Support**: Container-ready with docker-compose
+- **Code Quality**: Black, Ruff, MyPy configured
 
-## Структура проекту
+## 📋 Table of Contents
 
-```
-app/
-├── __init__.py
-├── config.py                    # Конфігурація з .env
-├── main.py                      # FastAPI додаток (moved to root)
-├── routers/
-│   ├── __init__.py
-│   ├── chat.py                  # POST /api/chat
-│   └── tools.py                 # GET /api/tools
-├── services/
-│   ├── __init__.py
-│   ├── llm_service.py           # Основна логіка
-│   └── tool_executor.py         # Виконання інструментів
-├── providers/
-│   ├── __init__.py
-│   ├── base.py                  # Базовий клас
-│   ├── deepinfra.py             # DeepInfra API
-│   ├── openai_provider.py       # OpenAI API
-│   └── ollama.py                # Ollama API
-├── tools/
-│   ├── __init__.py              # Tool registry
-│   ├── base.py                  # Базовий клас інструмента
-│   ├── calculator.py            # Калькулятор
-│   └── web_search.py            # Web search (mock)
-└── schemas/
-    ├── __init__.py
-    ├── chat.py                  # ChatMessage, ChatRequest, ChatResponse
-    └── tools.py                 # ToolSchema, ToolParameter
-```
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Development](#development)
+- [Testing](#testing)
+- [Architecture](#architecture)
+- [Contributing](#contributing)
 
-## Встановлення
+## 🚀 Quick Start
 
-### 1. Встановити залежності
+### Using Make (recommended)
 
 ```bash
-pip install -r requirements.txt
+# Install dependencies
+make install
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# Run in development mode
+make dev
 ```
 
-### 2. Налаштувати конфігурацію
+### Using Docker
 
-Скопіювати `.env.example` в `.env` та заповнити необхідні ключі:
+```bash
+# Copy and configure environment
+cp .env.example .env
+
+# Start with docker-compose
+make docker-up
+```
+
+Service will be available at `http://localhost:8000`
+
+## 📦 Installation
+
+### Prerequisites
+
+- Python 3.12+
+- pip or poetry
+- (Optional) Docker and docker-compose
+- (Optional) Ollama for local models
+
+### Local Installation
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd llm-middleware-python
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# For development
+pip install -r requirements-dev.txt
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create `.env` file from template:
 
 ```bash
 cp .env.example .env
 ```
 
+Configure the following:
+
 ```env
-DEEPINFRA_API_KEY=your_api_key_here
-OPENAI_API_KEY=your_api_key_here
-OLLAMA_BASE_URL=http://localhost:11434
+# LLM Provider API Keys
+DEEPINFRA_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
+
+# Provider Configuration
 DEFAULT_PROVIDER=deepinfra
 DEFAULT_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
+
+# Ollama (for local models)
+OLLAMA_BASE_URL=http://localhost:11434
+
+# Logging
+LOG_LEVEL=INFO
 ```
 
-## Запуск
+### Provider Setup
 
-### Локально
+#### DeepInfra
+1. Sign up at https://deepinfra.com
+2. Get API key from dashboard
+3. Set `DEEPINFRA_API_KEY` in `.env`
+
+#### OpenAI
+1. Sign up at https://platform.openai.com
+2. Create API key
+3. Set `OPENAI_API_KEY` in `.env`
+
+#### Ollama (Local)
+1. Install from https://ollama.ai
+2. Start server: `ollama serve`
+3. Pull model: `ollama pull qwen2.5:7b`
+
+## 📖 Usage
+
+### Start Server
 
 ```bash
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Development mode (auto-reload)
+make dev
+
+# Or directly with uvicorn
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Через Docker
+### API Examples
+
+#### Simple Chat
 
 ```bash
-docker-compose up
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "provider": "ollama"
+  }'
 ```
 
-Сервіс буде доступний на `http://localhost:8000`
+#### Chat with Calculator
 
-## API Endpoints
-
-### 1. Health Check
-
-```http
-GET /api/health
+```bash
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Calculate 25 * 17 + 33"}],
+    "provider": "ollama",
+    "tools": ["calculator"]
+  }'
 ```
 
-Повертає статус сервісу та конфігурацію.
+#### Web Search
 
-**Відповідь:**
-```json
-{
-  "status": "ok",
-  "default_provider": "deepinfra",
-  "default_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
-}
+```bash
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Latest AI news"}],
+    "provider": "ollama",
+    "tools": ["news_search"]
+  }'
 ```
 
-### 2. Список провайдерів
+## 📚 API Documentation
 
-```http
-GET /api/providers
-```
+### Endpoints
 
-Повертає список доступних LLM провайдерів та статус їх налаштування.
+- **GET /** - Root endpoint
+- **GET /api/health** - Health check with system info
+- **GET /api/providers** - List available providers
+- **GET /api/tools** - List available tools
+- **POST /api/chat** - Main chat endpoint
+- **GET /api/docs** - Interactive API documentation (Swagger UI)
+- **GET /api/redoc** - Alternative API documentation (ReDoc)
 
-**Відповідь:**
-```json
-{
-  "providers": [
-    {
-      "name": "deepinfra",
-      "description": "DeepInfra API",
-      "available": true
-    },
-    {
-      "name": "openai",
-      "description": "OpenAI API",
-      "available": false
-    },
-    {
-      "name": "ollama",
-      "description": "Ollama Local",
-      "available": true
-    }
-  ]
-}
-```
+### Chat Request Schema
 
-### 3. Список інструментів
-
-```http
-GET /api/tools
-```
-
-Повертає список доступних інструментів для tool calling.
-
-**Відповідь:**
-```json
-[
-  {
-    "name": "calculator",
-    "description": "Виконує математичні обчислення. Використовуй для арифметичних операцій.",
-    "parameters": [
-      {
-        "name": "expression",
-        "type": "string",
-        "description": "Математичний вираз (наприклад, \"2 + 2 * 3\")",
-        "required": true
-      }
-    ]
-  },
-  {
-    "name": "web_search",
-    "description": "Шукає актуальну інформацію в інтернеті. Використовуй для пошуку новин, фактів, поточних подій.",
-    "parameters": [
-      {
-        "name": "query",
-        "type": "string",
-        "description": "Пошуковий запит українською або англійською мовою",
-        "required": true
-      },
-      {
-        "name": "max_results",
-        "type": "integer",
-        "description": "Максимальна кількість результатів (1-10, за замовчуванням 5)",
-        "required": false
-      },
-      {
-        "name": "include_content",
-        "type": "boolean",
-        "description": "Чи включати повний контент сторінок (за замовчуванням true)",
-        "required": false
-      }
-    ]
-  },
-  {
-    "name": "news_search",
-    "description": "Шукає свіжі новини та актуальні події.",
-    "parameters": [
-      {
-        "name": "query",
-        "type": "string",
-        "description": "Пошуковий запит для новин",
-        "required": true
-      },
-      {
-        "name": "max_results",
-        "type": "integer",
-        "description": "Максимальна кількість новин (1-15, за замовчуванням 8)",
-        "required": false
-      },
-      {
-        "name": "time_range",
-        "type": "string",
-        "description": "Період пошуку: 'd' (день), 'w' (тиждень), 'm' (місяць), 'y' (рік)",
-        "required": false
-      }
-    ]
-  },
-  {
-    "name": "web_scraper",
-    "description": "Витягує повний контент з конкретної веб-сторінки за URL.",
-    "parameters": [
-      {
-        "name": "url",
-        "type": "string",
-        "description": "URL веб-сторінки для скрапінгу (повний URL з https://)",
-        "required": true
-      },
-      {
-        "name": "extract_links",
-        "type": "boolean",
-        "description": "Чи витягувати посилання зі сторінки (за замовчуванням false)",
-        "required": false
-      }
-    ]
-  },
-  {
-    "name": "web_summarizer",
-    "description": "Шукає інформацію та створює стисле резюме з кількох джерел.",
-    "parameters": [
-      {
-        "name": "query",
-        "type": "string",
-        "description": "Тема або запит для пошуку та резюмування",
-        "required": true
-      },
-      {
-        "name": "max_sources",
-        "type": "integer",
-        "description": "Максимальна кількість джерел для резюме (1-5, за замовчуванням 3)",
-        "required": false
-      }
-    ]
-  }
-]
-```
-
-### 4. Chat (Основний endpoint)
-
-```http
-POST /api/chat
-Content-Type: application/json
-```
-
-**Request:**
 ```json
 {
   "messages": [
-    {
-      "role": "user",
-      "content": "Привіт! Скільки буде 25 * 17 + 33?"
-    }
+    {"role": "user", "content": "Your message"}
   ],
-  "provider": "deepinfra",
-  "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-  "tools": ["calculator"],
-  "max_tokens": 1000,
-  "temperature": 0.7
+  "provider": "ollama",
+  "model": "qwen2.5:7b",
+  "tools": ["calculator", "web_search"],
+  "temperature": 0.7,
+  "max_tokens": 1000
 }
 ```
 
-**Response:**
+### Chat Response Schema
+
 ```json
 {
   "success": true,
   "message": {
     "role": "assistant",
-    "content": "25 * 17 + 33 = 425 + 33 = 458"
+    "content": "Response text"
   },
   "tool_calls_made": [
     {
       "tool": "calculator",
-      "arguments": {
-        "expression": "25 * 17 + 33"
-      },
-      "result": {
-        "result": 458,
-        "expression": "25 * 17 + 33"
-      }
+      "arguments": {"expression": "2+2"},
+      "result": {"result": 4}
     }
   ],
   "usage": {
@@ -318,444 +227,199 @@ Content-Type: application/json
     "completion_tokens": 50,
     "total_tokens": 200
   },
-  "provider": "deepinfra",
-  "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+  "provider": "ollama",
+  "model": "qwen2.5:7b"
 }
 ```
 
-## Лаштування інструментів
+## 🛠️ Development
 
-### Додавання нового інструмента
+### Project Structure
 
-1. Створити файл в `app/tools/` (наприклад, `my_tool.py`):
-
-```python
-from app.schemas.tools import ToolParameter
-from app.tools.base import BaseTool
-
-class MyTool(BaseTool):
-    @property
-    def name(self) -> str:
-        return "my_tool"
-    
-    @property
-    def description(self) -> str:
-        return "Опис інструмента"
-    
-    @property
-    def parameters(self) -> list[ToolParameter]:
-        return [
-            ToolParameter(
-                name="param1",
-                type="string",
-                description="Описання параметра",
-                required=True
-            )
-        ]
-    
-    async def execute(self, **kwargs) -> dict:
-        param1 = kwargs.get("param1")
-        # Реалізація логіки
-        return {"result": "успіх"}
+```
+llm-middleware-python/
+├── app/
+│   ├── core/              # Core functionality
+│   │   ├── constants.py   # Application constants
+│   │   ├── dependencies.py # FastAPI dependencies
+│   │   ├── exceptions.py  # Custom exceptions
+│   │   └── logging.py     # Logging configuration
+│   ├── providers/         # LLM providers
+│   │   ├── base.py
+│   │   ├── deepinfra.py
+│   │   ├── ollama.py
+│   │   └── openai_provider.py
+│   ├── routers/           # API routes
+│   │   ├── chat.py
+│   │   └── tools.py
+│   ├── schemas/           # Pydantic models
+│   │   ├── chat.py
+│   │   └── tools.py
+│   ├── services/          # Business logic
+│   │   ├── llm_service.py
+│   │   ├── prompt_builder.py
+│   │   └── ...
+│   ├── tools/             # Tool implementations
+│   │   ├── base.py
+│   │   ├── calculator.py
+│   │   ├── web_search.py
+│   │   └── ...
+│   └── config.py          # Configuration
+├── tests/                 # Test suite
+├── main.py               # Application entry point
+├── requirements.txt      # Production dependencies
+├── requirements-dev.txt  # Development dependencies
+├── pyproject.toml       # Project configuration
+├── Makefile             # Development commands
+└── Dockerfile           # Container definition
 ```
 
-2. Зареєструвати в `app/tools/__init__.py`:
-
-```python
-from app.tools.my_tool import MyTool
-
-_registry.register(MyTool())
-```
-
-## Tool Calling Loop
-
-Сервіс автоматично виконує tool calling в циклі:
-
-1. LLM отримує запит з інструментами
-2. Якщо LLM визначає, що потрібен інструмент:
-   - Повертає tool call з аргументами
-3. Сервіс виконує інструмент
-4. Додає результат до контексту
-5. Викликає LLM знову з результатом
-6. Повторює процес до 10 разів або поки LLM не закінчить
-
-## Логування
-
-Сервіс логує всі операції:
-- Вхідні запити
-- Вибір провайдера і моделі
-- Execution tool calls
-- Помилки та винятки
-
-Логи у форматі:
-```
-%(asctime)s - %(name)s - %(levelname)s - %(message)s
-```
-
-## Приклади використання
-
-### cURL
+### Make Commands
 
 ```bash
-# Health check
-curl http://localhost:8000/api/health
-
-# Simple chat
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Привіт!"}],
-    "provider": "deepinfra"
-  }'
-
-# Chat with calculator
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Скільки буде 2 + 2?"}],
-    "provider": "deepinfra",
-    "tools": ["calculator"]
-  }'
-
-# Web search
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Знайди останні новини про штучний інтелект"}],
-    "provider": "deepinfra",
-    "tools": ["web_search"]
-  }'
-
-# News search
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Які новини сьогодні в технологіях?"}],
-    "provider": "deepinfra",
-    "tools": ["news_search"]
-  }'
-
-# Web scraping
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Витягни контент з https://example.com"}],
-    "provider": "deepinfra",
-    "tools": ["web_scraper"]
-  }'
-
-# Web summarization
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Створи резюме про FastAPI з кількох джерел"}],
-    "provider": "deepinfra",
-    "tools": ["web_summarizer"]
-  }'
+make help          # Show all available commands
+make install       # Install dependencies
+make install-dev   # Install dev dependencies
+make run           # Run application
+make dev           # Run with auto-reload
+make test          # Run tests
+make lint          # Run linters
+make format        # Format code
+make clean         # Clean cache files
+make docker-build  # Build Docker image
+make docker-up     # Start containers
 ```
 
-### Python
+### Code Quality
 
-```python
-import httpx
-
-async with httpx.AsyncClient() as client:
-    response = await client.post(
-        "http://localhost:8000/api/chat",
-        json={
-            "messages": [{"role": "user", "content": "Привіт!"}],
-            "provider": "deepinfra"
-        }
-    )
-    print(response.json())
-```
-
-### JavaScript
-
-```javascript
-const response = await fetch("http://localhost:8000/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    messages: [{ role: "user", content: "Привіт!" }],
-    provider: "deepinfra"
-  })
-});
-
-const data = await response.json();
-console.log(data);
-```
-
-## Налаштування провайдерів
-
-### DeepInfra
-
-Найпростіший варіант для швидкого старту. Вимагає API ключ.
-
-1. Зареєструватися на https://deepinfra.com
-2. Отримати API ключ
-3. Встановити `DEEPINFRA_API_KEY` в `.env`
-
-### OpenAI
-
-Для використання GPT моделей.
-
-## ⚠️ Проблема: Модель не використовує інструменти (Tools)
-
-Якщо ваша модель не викликає інструменти, це може бути через кілька причин:
-
-### 1. **Модель не підтримує Function Calling**
-
-Не всі моделі підтримують function calling. Для роботи з інструментами потрібні спеціально навчені моделі.
-
-#### ✅ Моделі, які ПІДТРИМУЮТЬ function calling:
-
-**Ollama (локальні):**
-- `qwen2.5:7b` ⭐ **РЕКОМЕНДОВАНА** - найкраща підтримка tools
-- `llama3.1:8b` - офіційна підтримка від Meta
-- `mistral:7b-instruct-v0.3` - добра підтримка
-- `firefunction-v2` - спеціалізована для function calling
-
-**DeepInfra (хмарні):**
-- `meta-llama/Llama-3.3-70B-Instruct-Turbo` ⭐ **РЕКОМЕНДОВАНА**
-- `meta-llama/Llama-3.1-70B-Instruct`
-- `Qwen/Qwen2.5-72B-Instruct`
-
-**OpenAI:**
-- `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo`
-
-#### ❌ Моделі, які НЕ підтримують:
-- `gemma2:2b`, `gemma3:4b` - занадто малі
-- `llama2` - старша версія
-- Більшість моделей < 7B параметрів
-
-### 2. **Ollama не запущений**
+The project uses:
+- **Black** for code formatting
+- **Ruff** for linting
+- **MyPy** for type checking
+- **Pytest** for testing
 
 ```bash
-# Перевірка
-curl http://127.0.0.1:11434/api/tags
+# Format code
+make format
 
-# Якщо не працює - запустіть
-ollama serve
+# Run linters
+make lint
 
-# В іншому терміналі завантажте модель
-ollama pull qwen2.5:7b
+# Run tests
+make test
 ```
 
-### 3. **Проблема з підключенням**
+## 🧪 Testing
 
-Якщо бачите помилку "Connection error" або "Temporary failure in name resolution":
+### Run Tests
 
 ```bash
-# Перевірте чи запущений Ollama
-ps aux | grep ollama
+# All tests
+make test
 
-# Перевірте порт
-netstat -tlnp | grep 11434
+# Verbose output
+make test-verbose
 
-# Спробуйте перезапустити
-pkill ollama
-ollama serve
+# With coverage
+pytest --cov=app --cov-report=html
 ```
 
-### 4. **Налаштування для кращої роботи з інструментами**
+### Test Structure
 
-Наш сервіс автоматично додає system prompt для інструментів, але ви можете налаштувати:
-
-```python
-# У .env файлі
-DEFAULT_PROVIDER=ollama
-DEFAULT_MODEL=qwen2.5:7b
-
-# Або у запиті
-ChatRequest(
-    messages=[...],
-    provider="ollama",
-    model="qwen2.5:7b",  # Модель з підтримкою tools
-    tools=["calculator", "web_search"],
-    temperature=0.1  # Низька temperature для стабільності
-)
+```
+tests/
+├── conftest.py           # Test configuration and fixtures
+├── test_main.py          # Test main endpoints
+├── test_config.py        # Test configuration
+├── test_prompt_builder.py # Test prompt utilities
+└── ...
 ```
 
-## Тестування інструментів
+## 🏗️ Architecture
 
-### Швидкий тест
+### Clean Architecture Principles
 
-```bash
-# Базовий тест (перевіряє формат і підключення)
-python3 test_tools_usage.py
+1. **Separation of Concerns**: Clear boundaries between layers
+2. **Dependency Injection**: Services injected via FastAPI dependencies
+3. **Abstract Base Classes**: Provider and tool interfaces
+4. **Type Safety**: Full type hints throughout
+5. **Error Handling**: Custom exceptions with proper error responses
+6. **Logging**: Structured logging with proper log levels
 
-# Розширений тест (з різними провайдерами)
-python3 test_tools_comprehensive.py
+### Key Components
+
+#### Core Layer
+- **Constants**: Application-wide constants
+- **Exceptions**: Custom exception hierarchy
+- **Dependencies**: FastAPI dependency injection
+- **Logging**: Centralized logging configuration
+
+#### Providers Layer
+- Abstract `BaseLLMProvider` class
+- Provider implementations (DeepInfra, OpenAI, Ollama)
+- Unified interface for all LLM interactions
+
+#### Services Layer
+- **LLMService**: Orchestrates chat and tool calling
+- **PromptBuilder**: Constructs prompts with tool descriptions
+- **ToolExecutor**: Manages tool execution
+- **WebIntelligence**: Web scraping and search services
+
+#### Tools Layer
+- Abstract `BaseTool` class
+- Tool registry for dynamic tool management
+- Built-in tools: Calculator, WebSearch, NewsSearch, WebScraper
+
+### Tool Calling Flow
+
+```
+1. User sends chat request with tools
+2. LLMService adds system prompt with tool descriptions
+3. LLM generates response (may include tool call)
+4. PromptBuilder parses tool call from response
+5. Tool is executed with provided arguments
+6. Result is added to conversation context
+7. Loop continues until final response (max 10 iterations)
 ```
 
-### Запуск сервера і тест через API
+## 🤝 Contributing
 
-```bash
-# Термінал 1: Запустити Ollama
-ollama serve
+Contributions are welcome! Please follow these guidelines:
 
-# Термінал 2: Запустити AI сервіс
-uvicorn main:app --reload
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests and linters (`make check`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
-# Термінал 3: Тест через curl
-curl -X POST http://localhost:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Скільки буде 125 * 47?"}],
-    "provider": "ollama",
-    "model": "qwen2.5:7b",
-    "tools": ["calculator"],
-    "temperature": 0.1
-  }'
-```
+### Code Style
 
-## Веб-скрапінг інструменти
+- Follow PEP 8 guidelines
+- Use type hints
+- Write docstrings for functions and classes
+- Add tests for new features
+- Keep functions focused and small
 
-Проект включає потужні інструменти для отримання інформації з інтернету:
+## 📄 License
 
-### Доступні інструменти:
+MIT License - see LICENSE file for details
 
-1. **web_search** - Пошук в інтернеті (DuckDuckGo)
-2. **news_search** - Пошук новин
-3. **web_scraper** - Скрапінг конкретної сторінки
-4. **web_summarizer** - Пошук і створення резюме з кількох джерел
+## 🙏 Acknowledgments
 
-### Приклади:
+- FastAPI for the excellent web framework
+- Pydantic for data validation
+- All LLM providers (DeepInfra, OpenAI, Ollama)
 
-```python
-# Пошук актуальної інформації
-ChatRequest(
-    messages=[{"role": "user", "content": "Яка погода в Києві?"}],
-    tools=["web_search"]
-)
+## 📞 Support
 
-# Новини
-ChatRequest(
-    messages=[{"role": "user", "content": "Останні новини про AI"}],
-    tools=["news_search"]
-)
+For issues and questions:
+- Open an issue on GitHub
+- Check existing documentation
+- Review API docs at `/api/docs`
 
-# Скрапінг сторінки
-ChatRequest(
-    messages=[{"role": "user", "content": "Витягни текст з https://example.com"}],
-    tools=["web_scraper"]
-)
+---
 
-# Резюме з кількох джерел
-ChatRequest(
-    messages=[{"role": "user", "content": "Зроби резюме про Bitcoin"}],
-    tools=["web_summarizer"]
-)
-```
-
-## Додаткова інформація
-
-- 📖 **Детальний гайд по tools:** [TOOLS_GUIDE.md](TOOLS_GUIDE.md)
-- 🌐 **Інформація про веб-скрапінг:** [WEB_SCRAPING.md](WEB_SCRAPING.md)
-- 📋 **Гайдлайни розробки:** [GUIDELINE.md](GUIDELINE.md)
-
-## Troubleshooting
-
-### Ollama не підключається
-
-```bash
-# Помилка: Connection error
-# Рішення 1: Перевірте чи запущений
-ollama serve
-
-# Рішення 2: Перевірте конфігурацію
-echo $OLLAMA_HOST  # Має бути 127.0.0.1:11434
-
-# Рішення 3: Перезапустіть
-pkill ollama && ollama serve
-```
-
-### Модель не використовує інструменти
-
-```bash
-# 1. Перевірте модель
-ollama list  # Має бути qwen2.5:7b або llama3.1:8b
-
-# 2. Завантажте правильну модель
-ollama pull qwen2.5:7b
-
-# 3. Оновіть Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# 4. Перевірте версію (потрібна >= 0.1.26)
-ollama --version
-```
-
-### Веб-скрапінг не працює
-
-```bash
-# Встановіть залежності
-pip install beautifulsoup4 lxml aiohttp
-
-# Або оновіть пакет для пошуку
-pip install --upgrade ddgs
-
-# Перевірте налаштування
-python3 test_web_intelligence.py
-```
-
-## Контакти і підтримка
-
-Якщо виникли проблеми або питання:
-1. Перегляньте [TOOLS_GUIDE.md](TOOLS_GUIDE.md)
-2. Запустіть тести: `python3 test_tools_usage.py`
-3. Перевірте логи сервісу
-
-### OpenAI
-
-Для використання GPT моделей.
-
-1. Зареєструватися на https://platform.openai.com
-2. Отримати API ключ
-3. Встановити `OPENAI_API_KEY` в `.env`
-4. Передавати `provider: "openai"` в запитах
-
-### Ollama
-
-Для локального запуску моделей на машині.
-
-1. Встановити Ollama з https://ollama.ai
-2. Запустити Ollama сервер: `ollama serve`
-3. Завантажити модель: `ollama pull llama2`
-4. Встановити `OLLAMA_BASE_URL` в `.env` (default: http://localhost:11434)
-5. Передавати `provider: "ollama"` в запитах
-
-## Обмеження та Примітки
-
-- Tool calling loop обмежена 10 ітеціями щоб уникнути нескінченних циклів
-- Калькулятор використовує обмежений eval для безпеки
-- Web search поки що повертає mock результати
-- Всі операції є асинхронні для максимальної продуктивності
-- CORS включений для всіх походжень (для розробки)
-
-## Розвиток
-
-### Плани
-
-- [x] Інтегрування реального web search (DuckDuckGo) ✅ Виконано
-- [x] Веб-скрапінг з витягуванням контенту ✅ Виконано  
-- [x] Пошук новин з фільтрацією за датами ✅ Виконано
-- [x] Автоматичне резюмування з кількох джерел ✅ Виконано
-- [ ] Підтримка JavaScript сайтів (Selenium/Playwright)
-- [ ] Інтеграція з Google Search API
-- [ ] Додавання більш складних інструментів (база даних, файлова система)
-- [ ] Streaming відповідей
-- [ ] Кешування запитів та результатів пошуку
-- [ ] Rate limiting для веб-запитів
-- [ ] Аутентифікація та авторизація
-- [ ] Моніторинг та аналітика веб-трафіку
-
-## Ліцензія
-
-MIT
-
-## Підтримка
-
-Для питань та проблем створіть issue на GitHub або зв'яжіться з розробниками.
+**Note**: This is a refactored version with clean architecture principles, improved error handling, type safety, and comprehensive testing support.
 
